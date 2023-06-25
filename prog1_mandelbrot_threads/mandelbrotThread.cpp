@@ -24,23 +24,7 @@ extern void mandelbrotSerial(
     int startRow, int numRows,
     int maxIterations,
     int output[]);
-static inline int mandel(float c_re, float c_im, int count)
-{
-    float z_re = c_re, z_im = c_im;
-    int i;
-    for (i = 0; i < count; ++i) {
 
-        if (z_re * z_re + z_im * z_im > 4.f)
-            break;
-
-        float new_re = z_re*z_re - z_im*z_im;
-        float new_im = 2.f * z_re * z_im;
-        z_re = c_re + new_re;
-        z_im = c_im + new_im;
-    }
-
-    return i;
-}
 
 
 //
@@ -55,46 +39,13 @@ void workerThreadStart(WorkerArgs * const args) {
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
 
-    double startTime,endTime;
-    startTime = CycleTimer::currentSeconds();
-
-
-
-     int startRow,endRow;
-    int steps;
-    int width=args->width;
-    int height=args->height;
-    steps=height/args->numThreads;
-    startRow=args->threadId*steps;
-    if (args->threadId!=args->numThreads-1){
-        endRow=startRow+steps;
-    }else{
-        endRow=startRow+height-args->threadId*steps;
-    }
-
-    float dx,dy;
-    dx=(args->x1-args->x0)/width;
-    dy=(args->y1-args->y0)/height;
-    for ( int i=startRow;i<endRow;i++){
-        for ( int j=0;j<width;++j){
-            float x=args->x0+j*dx;
-            float y=args->y0+i*dy;
-            int index=i*width+j;
-
-
-            args->output[index]=mandel(x,y,args->maxIterations);
-        }
-    }
-    endTime=CycleTimer::currentSeconds();
-    printf("%d thread use time [%.3fms]\n",args->threadId,(endTime-startTime)*1000);
+    mandelbrotSerial(args->x0,args->y0,args->x1,args->y1,args->width,args->height,args->threadId*args->steps,\
+    args->steps,args->maxIterations,args->output
+                     );
 //    printf("Hello world from thread %d\n", args->threadId);
 }
 
-void workerThreadStart2(WorkerArgs * args){
-    mandelbrotSerial(args->x0,args->y0,args->x1,args->y1,args->width,args->height,args->threadId*args->steps,\
-    args->threadId!=args->numThreads-1?args->steps:args->height-args->steps*args->threadId,args->maxIterations,args->output
-                     );
-}
+
 
 //
 // MandelbrotThread --
@@ -136,7 +87,7 @@ void mandelbrotThread(
         args[i].output = output;
       
         args[i].threadId = i;
-        args[i].steps=steps;
+        args[i].steps= i!=numThreads-1?steps:height-i*steps;
     }
 
     // Spawn the worker threads.  Note that only numThreads-1 std::threads
