@@ -14,6 +14,7 @@ typedef struct {
     int threadId;
     int numThreads;
 
+    int startRow;
     int steps;
 } WorkerArgs;
 
@@ -38,10 +39,15 @@ void workerThreadStart(WorkerArgs * const args) {
     // to compute a part of the output image.  For example, in a
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
+    double startTime = CycleTimer::currentSeconds();
 
-    mandelbrotSerial(args->x0,args->y0,args->x1,args->y1,args->width,args->height,args->threadId*args->steps,\
+    mandelbrotSerial(args->x0,args->y0,args->x1,args->y1,args->width,args->height,args->startRow,\
     args->steps,args->maxIterations,args->output
                      );
+
+    double endTime = CycleTimer::currentSeconds();
+    printf("[mandelbrot thread %d]:\t\t[%.3f] ms\n",args->threadId, (endTime-startTime) * 1000);
+
 //    printf("Hello world from thread %d\n", args->threadId);
 }
 
@@ -87,6 +93,7 @@ void mandelbrotThread(
         args[i].output = output;
       
         args[i].threadId = i;
+        args[i].startRow=i*steps;
         args[i].steps= i!=numThreads-1?steps:height-i*steps;
     }
 
