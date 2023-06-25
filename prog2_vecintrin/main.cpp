@@ -249,7 +249,64 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
   // Your solution should work for any value of
   // N and VECTOR_WIDTH, not just when VECTOR_WIDTH divides N
   //
-  
+  __cs149_vec_float result;
+  __cs149_vec_float x;
+  __cs149_vec_int  y;
+  __cs149_vec_int zero = _cs149_vset_int(0);
+  __cs149_vec_int one = _cs149_vset_int(1);
+  __cs149_mask maskAll, maskIsEqual, maskIsNotEqual,maskRemain;
+
+  __cs149_vec_float limit;
+
+
+
+  for (int i=0;i<N;i+=VECTOR_WIDTH){
+      // All ones
+      maskAll = _cs149_init_ones();
+
+
+      _cs149_vset_float(limit,9.999999f,maskAll);      //   limit=9.999999f
+      // Load vector of values from contiguous memory addresses
+      _cs149_vload_float(x, values+i, maskAll);               // x = values[i];
+      _cs149_vload_int(y,exponents+i,maskAll); //y=exponents[i];
+      // Set mask according to predicate
+      _cs149_veq_int(maskIsEqual,y,zero,maskAll);               // if (y==0){
+      // Execute instruction using mask ("if" clause)
+      _cs149_vset_float(result,1.f,maskIsEqual);      //   output[i] = 1.f
+      _cs149_vstore_float(output+i,result,maskIsEqual);
+      // Inverse maskIsNegative to generate "else" mask
+      maskIsNotEqual = _cs149_mask_not(maskIsEqual);     // } else {
+
+      // Execute instruction ("else" clause)
+      //result=x;
+      _cs149_vmove_float(result,x,maskIsNotEqual);
+      // count=y-1;
+      _cs149_vsub_int(y,y,one,maskIsNotEqual);
+
+      _cs149_vgt_int(maskRemain,y,zero,maskIsNotEqual);
+      while(_cs149_cntbits(maskRemain)){
+          _cs149_vmult_float(result,result,x,maskRemain);
+          _cs149_vsub_int(y,y,one,maskRemain);
+          _cs149_vgt_int(maskRemain,y,zero,maskAll);
+      }
+
+      _cs149_vgt_float(maskRemain,result,limit,maskIsNotEqual);
+
+      _cs149_vset_float(result,9.999999f,maskRemain);
+
+
+      _cs149_vstore_float(output+i,result,maskIsNotEqual);
+
+//      while (count > 0) {
+//          result *= x;
+//          count--;
+//      }
+//      if (result > 9.999999f) {
+//          result = 9.999999f;
+//      }
+//      output[i] = result;
+
+  }
 }
 
 // returns the sum of all elements in values
@@ -270,11 +327,27 @@ float arraySumVector(float* values, int N) {
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of arraySumSerial here
   //
-  
+  float sum=0;
+  __cs149_mask maskAll,maskHead;
+  __cs149_vec_float res;
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
+
+      maskAll= _cs149_init_ones();
+      maskHead= _cs149_init_ones(1);
+      int width=VECTOR_WIDTH;
+      float thisSum=0;
+      _cs149_vload_float(res,values+i,maskAll);
+      while (width!=1){
+          _cs149_hadd_float(res,res);
+          _cs149_interleave_float(res,res);
+          width/=2;
+      }
+
+      _cs149_vstore_float(&thisSum,res,maskHead);
+      sum+=thisSum;
 
   }
 
-  return 0.0;
+  return sum;
 }
 
