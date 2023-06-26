@@ -252,8 +252,8 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
   __cs149_vec_float result;
   __cs149_vec_float x;
   __cs149_vec_int  y;
-  __cs149_vec_int zero = _cs149_vset_int(0);
-  __cs149_vec_int one = _cs149_vset_int(1);
+  __cs149_vec_int zero ;
+  __cs149_vec_int one ;
   __cs149_mask maskAll, maskIsEqual, maskIsNotEqual,maskRemain;
 
   __cs149_vec_float limit;
@@ -262,8 +262,9 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
 
   for (int i=0;i<N;i+=VECTOR_WIDTH){
       // All ones
-      maskAll = _cs149_init_ones();
-
+      maskAll = _cs149_init_ones(min(VECTOR_WIDTH,N-i));
+      _cs149_vset_int(zero,0,maskAll);
+      _cs149_vset_int(one,1,maskAll);
 
       _cs149_vset_float(limit,9.999999f,maskAll);      //   limit=9.999999f
       // Load vector of values from contiguous memory addresses
@@ -271,11 +272,13 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
       _cs149_vload_int(y,exponents+i,maskAll); //y=exponents[i];
       // Set mask according to predicate
       _cs149_veq_int(maskIsEqual,y,zero,maskAll);               // if (y==0){
+      maskIsEqual= _cs149_mask_and(maskIsEqual,maskAll);
       // Execute instruction using mask ("if" clause)
       _cs149_vset_float(result,1.f,maskIsEqual);      //   output[i] = 1.f
       _cs149_vstore_float(output+i,result,maskIsEqual);
       // Inverse maskIsNegative to generate "else" mask
       maskIsNotEqual = _cs149_mask_not(maskIsEqual);     // } else {
+      maskIsNotEqual= _cs149_mask_and(maskIsNotEqual,maskAll);
 
       // Execute instruction ("else" clause)
       //result=x;
@@ -284,6 +287,9 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
       _cs149_vsub_int(y,y,one,maskIsNotEqual);
 
       _cs149_vgt_int(maskRemain,y,zero,maskIsNotEqual);
+      maskRemain= _cs149_mask_and(maskRemain,maskAll);
+
+
       while(_cs149_cntbits(maskRemain)){
           _cs149_vmult_float(result,result,x,maskRemain);
           _cs149_vsub_int(y,y,one,maskRemain);
@@ -332,7 +338,7 @@ float arraySumVector(float* values, int N) {
   __cs149_vec_float res;
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
 
-      maskAll= _cs149_init_ones();
+      maskAll= _cs149_init_ones(min(VECTOR_WIDTH,N-i));
       maskHead= _cs149_init_ones(1);
       int width=VECTOR_WIDTH;
       float thisSum=0;
