@@ -2,9 +2,27 @@
 
 ## Program 1: Parallel Fractal Generation Using Threads (20 points)
 
+最简单直观的实现：按照高度依次平均分配给每个线程 ，每个线程的totalRows= height/ numThreads,加速比比较低
 
+| 线程数 | view1加速比 | view2加速比 |
+| ------ | ----------- | ----------- |
+| 2      | 1.98        | 1.65        |
+| 3      | 1.66        | 2.16        |
+| 4      | 2.42        | 2.50        |
+| 5      | 2.41        | 2.82        |
+| 6      | 3.12        | 3.07        |
+| 7      | 3.27        | 3.56        |
+| 8      | 3.72        | 3.78        |
 
+原因：每行的亮度不一样，循环次数有多有少，总的运行时间取决于计算量最大的线程
 
+![image-20230627151524538](images\image-20230627151524538.png)
+
+解决方案：每个线程以线程数量作为行间隔计算， 即i+=numTreads
+
+<img src="images\image-20230627151841401.png" alt="image-20230627151841401" style="zoom:50%;" />
+
+可以看到加速比能到达7.19x,但是开16个线程的效果跟8个线程差不多，因为还是不能将计算量平均分配到这么多个线程中，有些线程计算量很大，有些线程计算量很小。
 
 ## Program 2: Vectorizing Code Using SIMD Intrinsics (20 points)
 
@@ -93,3 +111,22 @@ Answer: Ideally,the maximum speedup might be 8x  since  the ISPC compiler emit *
    implementation should be nearly as fast (or faster) than the binary 
    produced using ISPC. You may find the [Intel Intrinsics Guide](https://software.intel.com/sites/landingpage/IntrinsicsGuide/) 
    very helpful.
+
+
+
+
+
+### Program 5: BLAS `saxpy`
+
+1. Compile and run `saxpy`. The program will report the performance of
+     ISPC (without tasks) and ISPC (with tasks) implementations of saxpy. What 
+     speedup from using ISPC with tasks do you observe? Explain the performance of this program.
+     Do you think it can be substantially improved? (For example, could you rewrite the code to achieve near linear speedup? Yes or No? Please justify your answer.)
+
+   The speedup  with task ISPC is only 0.92x. It might be memory bandwidth limiting the speedup.
+
+2. __Extra Credit:__ (1 point) Note that the total memory bandwidth consumed computation in `main.cpp` is `TOTAL_BYTES = 4 * N * sizeof(float);`.  Even though `saxpy` loads one element from X, one element from Y, and writes one element to `result` the multiplier by 4 is correct.  Why is this the case? (Hint, think about how CPU caches work.)
+
+3. __Extra Credit:__ (points handled on a case-by-case basis) Improve the performance of `saxpy`.
+   We're looking for a significant speedup here, not just a few percentage 
+     points. If successful, describe how you did it and what a best-possible implementation on these systems might achieve. Also, if successful, come tell the staff, we'll be interested. ;-)
